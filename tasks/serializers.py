@@ -1,5 +1,9 @@
 from rest_framework import serializers
+from .models import Task
 
-class ProcessSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    message = serializers.CharField(max_length=1000)
+
+class ProcessSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ['email', 'message']
+        # fields = "__all__"
