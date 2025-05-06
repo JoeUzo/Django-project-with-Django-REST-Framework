@@ -1,0 +1,7 @@
+Django
+djangorestframework
+celery
+redis
+gunicorn
+python-dotenv
+dj-database-url

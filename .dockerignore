@@ -1,0 +1,39 @@
+# Exclude Python cache and build artifacts
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Exclude virtual environments
+.venv
+env
+venv
+
+# Exclude logs and temporary files
+*.log
+/tmp
+
+# Exclude IDE configuration files
+.idea
+.vscode
+
+# Exclude Git files
+.git
+.gitignore
+
+# Exclude Dockerfile and docker-compose files if not needed in image
+Dockerfile
+docker-compose.yaml
+
+# Exclude local environment files
+.env
+.env.*
+
+# Exclude test files and directories
+tests
+test*.py
+*.md
+
+
+*.sqlite*

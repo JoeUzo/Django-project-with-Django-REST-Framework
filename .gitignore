@@ -29,7 +29,6 @@ Thumbs.db
 
 # Ignore Github Actions
 .github/
-pdf-samples/
 
 secret.sh
 *.sqlite*

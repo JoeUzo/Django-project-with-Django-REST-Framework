@@ -1,0 +1,42 @@
+networks:
+  api:
+    driver: bridge
+
+services:
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks: 
+      - api
+
+  web:
+    build: .
+    command: gunicorn microservice.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    # environment:
+    #   - CELERY_BROKER_URL=redis://redis:6379/0
+    #   - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    env_file:
+      - .env
+    networks: 
+      - api
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    command: celery -A microservice worker --loglevel=info --pool=solo
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    networks: 
+      - api
+    depends_on:
+      - redis
