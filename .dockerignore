@@ -78,3 +78,7 @@ dist/
 # System files
 .DS_Store
 Thumbs.db
+
+# Other files
+README.md
+LICENSE
