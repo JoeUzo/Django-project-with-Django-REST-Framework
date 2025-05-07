@@ -17,8 +17,6 @@ services:
   web:
     build: .
     command: gunicorn microservice.wsgi:application --bind 0.0.0.0:8000
-    volumes:
-      - .:/app
     ports:
       - "8000:8000"
     env_file:
@@ -32,8 +30,6 @@ services:
   worker:
     build: .
     command: celery -A microservice worker --loglevel=info --pool=solo
-    volumes:
-      - .:/app
     env_file:
       - .env
     networks: 
