@@ -40,3 +40,41 @@ test*.py
 
 # Ignore Github Actions
 .github/
+
+# Ignore git metadata
+.git
+.gitignore
+
+# Python caches
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+
+# Virtualenvs
+.venv
+venv
+ENV
+env
+
+# Local env files
+.env
+.env.*.local
+
+# IDEs / editors
+.idea
+.vscode
+
+# Logs and coverage
+*.log
+logs/
+.coverage
+htmlcov/
+
+# Packaging / build dirs
+build/
+dist/
+*.egg-info/
+
+# System files
+.DS_Store
+Thumbs.db
