@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
-
 import os
 from dotenv import load_dotenv
 import dj_database_url
@@ -22,6 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # load_dotenv()
 load_dotenv(override=True)
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -30,7 +30,6 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG = True
-# DEBUG = False
 
 # ALLOWED_HOSTS = []
 
@@ -147,5 +146,4 @@ CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND')
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
-print(F"Debug is {DEBUG}")
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
