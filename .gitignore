@@ -22,14 +22,6 @@ env/
 Thumbs.db
 .idea/
 
-#  Git
-.git
-#.gitignore
-
-
-# Ignore Github Actions
-.github/
-
 secret.sh
 *.sqlite*
 
