@@ -2,10 +2,12 @@ networks:
   api:
     driver: bridge
 
+volumes:
+  postgres_data:
+    driver: local
 services:
 
   redis:
-    container_name: redis
     image: redis:latest
     ports:
       - "6379:6379"
@@ -19,15 +21,13 @@ services:
       - .:/app
     ports:
       - "8000:8000"
-    # environment:
-    #   - CELERY_BROKER_URL=redis://redis:6379/0
-    #   - CELERY_RESULT_BACKEND=redis://redis:6379/0
     env_file:
       - .env
     networks: 
       - api
     depends_on:
       - redis
+      - db
 
   worker:
     build: .
@@ -40,3 +40,15 @@ services:
       - api
     depends_on:
       - redis
+      - db
+
+  db:
+    image: postgres:13
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: 
+      - api
+
