@@ -33,6 +33,7 @@ pipeline {
         script {
           env.IMAGE_TAG = "${DOCKER_REGISTRY}/${IMAGE_NAME}:${GIT_TAG}"
           sh "docker build -t ${IMAGE_TAG} ."  
+          sh "echo $IMAGE_TAG"
         }
       }
     }
@@ -65,6 +66,14 @@ pipeline {
       steps {
         timeout(time: 30, unit: 'MINUTES') {
           input message: 'Approve deployment to DEV?', ok: 'Deploy' 
+        }
+      }
+    }
+
+    stage('Prepare Env File') {
+      steps {
+        withCredentials([file(credentialsId: 'api-worker-env-file', variable: 'ENV_FILE')]) {
+          sh 'cp $ENV_FILE .env'
         }
       }
     }
