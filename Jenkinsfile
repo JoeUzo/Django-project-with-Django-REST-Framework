@@ -2,20 +2,19 @@ pipeline {
   agent any
 
   parameters {
-    booleanParam(name: 'RUN_SCAN',        defaultValue: true,  description: 'Run security scan')
-    booleanParam(name: 'DETACHED',        defaultValue: true,  description: 'Run containers detached')
-    booleanParam(name: 'RUN_MIGRATIONS',  defaultValue: true,  description: 'Run DB migrations after deploy')
+    booleanParam(name: 'RUN_SCAN',       defaultValue: true, description: 'Run security scan')
+    booleanParam(name: 'DETACHED',       defaultValue: true, description: 'Run containers in detached mode')
+    booleanParam(name: 'RUN_MIGRATIONS', defaultValue: true, description: 'Run DB migrations after deploy')
   }
 
   environment {
-    DOCKER_REGISTRY   = 'docker.io/joeuzo'
-    IMAGE_NAME        = 'api-worker'
-    DOCKER_CRED_ID    = 'docker-credentials'
+    DOCKER_REGISTRY = 'docker.io/joeuzo'
+    IMAGE_NAME      = 'api-worker'
+    DOCKER_CRED_ID  = 'docker-credentials'
   }
 
   options {
-    ansiColor('xterm')
-    timestamps()
+    timestamps() 
     buildDiscarder(logRotator(numToKeepStr: '10', daysToKeepStr: '30'))
   }
 
@@ -33,7 +32,7 @@ pipeline {
       steps {
         script {
           env.IMAGE_TAG = "${DOCKER_REGISTRY}/${IMAGE_NAME}:${GIT_TAG}"
-          sh "docker build -t ${IMAGE_TAG} ."
+          sh "docker build -t ${IMAGE_TAG} ."  
         }
       }
     }
@@ -53,7 +52,15 @@ pipeline {
           passwordVariable: 'DOCKER_PASS'
         )]) {
           sh 'echo $DOCKER_PASS | docker login $DOCKER_REGISTRY -u $DOCKER_USER --password-stdin'
-          sh "docker push ${IMAGE_TAG}"
+          sh "docker push ${IMAGE_TAG}"  
+        }
+      }
+    }
+
+    stage('Manual Approval') {
+      steps {
+        timeout(time: 30, unit: 'MINUTES') {
+          input message: 'Approve deployment to DEV?', ok: 'Deploy' 
         }
       }
     }
@@ -62,7 +69,6 @@ pipeline {
       steps {
         script {
           def detachFlag = params.DETACHED ? '-d' : ''
-          // Pull latest image then bring up services
           sh "docker-compose pull"
           sh "docker-compose up --build ${detachFlag}"
         }
@@ -78,8 +84,14 @@ pipeline {
   }
 
   post {
-    always { cleanWs() }
-    success { echo "✅ Pipeline Succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}" }
-    failure { echo "❌ Pipeline Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}" }
+    always {
+      cleanWs()
+    }
+    success {
+      echo "✅ Pipeline Succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+    }
+    failure {
+      echo "❌ Pipeline Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+    }
   }
 }
