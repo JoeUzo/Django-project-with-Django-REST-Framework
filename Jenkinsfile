@@ -98,6 +98,15 @@ pipeline {
     }
   }
 
+   stage('API Smoke Test') {
+      steps {
+        script {
+          def HOST_IP = sh(script: "hostname -I | awk '{print \\$1}'", returnStdout: true).trim()
+          sh "curl -f -X POST http://${HOST_IP}:8000/api/process/ -H 'Content-Type: application/json' -d '{\"email\":\"you@examplecom\",\"message\":\"Hello\"}'"
+        }
+      }
+    }
+
   post {
     always {
       cleanWs()
