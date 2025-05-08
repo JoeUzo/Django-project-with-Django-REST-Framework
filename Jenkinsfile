@@ -57,6 +57,8 @@ pipeline {
           sh '''
            echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
            docker push docker.io/joeuzo/api-worker:${GIT_TAG}
+           echo $IMAGE_TAG
+           echo docker.io/joeuzo/api-worker:${GIT_TAG}
           '''
         }
       }
