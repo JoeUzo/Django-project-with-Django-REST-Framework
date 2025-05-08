@@ -51,8 +51,12 @@ pipeline {
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS'
         )]) {
-          sh 'echo $DOCKER_PASS | docker login $DOCKER_REGISTRY -u $DOCKER_USER --password-stdin'
-          sh "docker push ${IMAGE_TAG}"  
+        //   sh 'echo $DOCKER_PASS | docker login $DOCKER_REGISTRY -u $DOCKER_USER --password-stdin'
+        //   sh "docker push ${IMAGE_TAG}"  
+          sh '''
+           echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
+           docker push docker.io/joeuzo/api-worker:${GIT_TAG}
+          '''
         }
       }
     }
