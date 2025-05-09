@@ -97,7 +97,7 @@ pipeline {
         sh "docker-compose run --rm web python manage.py migrate"
       }
     }
-  }
+
 
    stage('API Smoke Test') {
       steps {
@@ -107,6 +107,7 @@ pipeline {
         }
       }
     }
+  }
 
   post {
     success {
