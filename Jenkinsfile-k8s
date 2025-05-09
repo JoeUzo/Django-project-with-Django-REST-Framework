@@ -81,6 +81,7 @@ pipeline {
           // Create PVC and deployments
           sh 'kubectl apply -f k8s/postgres-pvc.yaml'
           sh 'kubectl apply -f k8s/postgres-deployment.yaml'
+          sh 'chmod +x k8s/manage-redis.sh'
           sh './k8s/manage-redis.sh create'
 
           // Deploy web & worker
