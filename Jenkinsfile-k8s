@@ -5,7 +5,7 @@ pipeline {
     booleanParam(name: 'RUN_SCAN',       defaultValue: true, description: 'Run security scan')
     booleanParam(name: 'RUN_MIGRATIONS', defaultValue: true, description: 'Run DB migrations after deploy')
     string(name: 'CLUSTER_NAME', defaultValue: 'eks-cluster', description: 'EKS Cluster Name')
-    string(name: 'AWS_REGION', defaultValue: 'us-east-2', description: 'AWS Region')
+    string(name: 'AWS_REGION',   defaultValue: 'us-east-2',    description: 'AWS Region')
   }
 
   environment {
@@ -13,7 +13,6 @@ pipeline {
     IMAGE_NAME      = 'api-worker'
     DOCKER_CRED_ID  = 'docker-credentials'
     K8S_SECRET_ID   = 'k8s-secrets-file'
-    EKS_CLUSTER     = 'my-eks-cluster'
   }
 
   options {
@@ -26,17 +25,24 @@ pipeline {
       steps {
         checkout scm
         script {
-          env.GIT_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+          env.GIT_TAG   = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
           env.IMAGE_TAG = "${DOCKER_REGISTRY}/${IMAGE_NAME}:${GIT_TAG}"
         }
         sh "docker build -t ${IMAGE_TAG} ."
       }
     }
 
-    stage('Scan & Push') {
+    stage('Security Scan') {
+      when {
+        expression { params.RUN_SCAN }
+      }
       steps {
-        when { expression { params.RUN_SCAN } }
         sh "trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_TAG} || true"
+      }
+    }
+
+    stage('Push Image') {
+      steps {
         withCredentials([usernamePassword(
           credentialsId: DOCKER_CRED_ID,
           usernameVariable: 'DOCKER_USER',
@@ -60,46 +66,65 @@ pipeline {
 
     stage('Deploy to EKS') {
       steps {
-        sh 'aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}'
+        script {
+          // Update kubeconfig for EKS
+          withCredentials([usernamePassword(
+            credentialsId: 'aws-eks-credentials',
+            usernameVariable: 'AWS_ACCESS_KEY_ID',
+            passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+          )]) {
+            sh 'aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}'
+          }
 
-        // Inject sealed secrets or raw secrets
-        withCredentials([file(credentialsId: K8S_SECRET_ID, variable: 'SECRETS_YAML')]) {
-          sh 'kubectl apply -f $SECRETS_YAML'
+          // Apply secrets
+          withCredentials([file(
+            credentialsId: K8S_SECRET_ID,
+            variable: 'SECRETS_YAML'
+          )]) {
+            sh 'kubectl apply -f $SECRETS_YAML'
+          }
+
+          // Create PVC and deployments
+          sh 'kubectl apply -f k8s/postgres-pvc.yaml'
+          sh 'kubectl apply -f k8s/postgres-deployment.yaml'
+          sh 'kubectl apply -f k8s/redis-deployment.yaml'
+
+          // Update container images
+          sh "kubectl set image deployment/web web=${IMAGE_TAG} -n app"
+          sh "kubectl set image deployment/worker worker=${IMAGE_TAG} -n app"
+
+          // Deploy web & worker
+          sh 'kubectl apply -f k8s/web-deployment.yaml'
+          sh 'kubectl apply -f k8s/worker-deployment.yaml'
+
+          // Wait for rollouts
+          sh 'kubectl rollout status deployment/web -n app'
+          sh 'kubectl rollout status deployment/worker -n app'
         }
-
-        // Apply persistent volume claims / deployments
-        sh 'kubectl apply -f k8s/postgres-pvc.yaml'
-        sh 'kubectl apply -f k8s/postgres-deployment.yaml'
-        sh 'kubectl apply -f k8s/redis-deployment.yaml'
-
-        // Update image on existing deployments
-        sh "kubectl set image deployment/web-deployment web=${IMAGE_TAG}"
-        sh "kubectl set image deployment/worker-deployment worker=${IMAGE_TAG}"
-
-        // Apply any additional manifests (if needed)
-        sh 'kubectl apply -f k8s/web-deployment.yaml'
-        sh 'kubectl apply -f k8s/worker-deployment.yaml'
-
-        // Wait for rollout
-        sh 'kubectl rollout status deployment/web-deployment'
-        sh 'kubectl rollout status deployment/worker-deployment'
       }
     }
 
     stage('Post-Deploy Migrations') {
-      when { expression { params.RUN_MIGRATIONS } }
+      when {
+        expression { params.RUN_MIGRATIONS }
+      }
       steps {
-        sh 'kubectl exec deployment/web-deployment -- python manage.py migrate'
+        sh 'kubectl exec deployment/web -n app -- python manage.py migrate'
       }
     }
 
     stage('API Smoke Test') {
       steps {
-        sh '''
-            curl -f -X POST http://${INGRESS_HOST}:8000/api/process/ \\
-             -H "Content-Type: application/json" \\
-            -d '{\"email\":\"you@example.com\",\"message\":\"Hello\"}'
-        '''
+        withCredentials([string(
+          credentialsId: 'ingress-host-credential',
+          variable: 'INGRESS_HOST'
+        )]) {
+          sh '''
+            curl -f -X POST http://${INGRESS_HOST}:8000/api/process/ \
+                 -H "Content-Type: application/json" \
+                 -d '{"email":"you@example.com","message":"Hello"}'
+          '''
+        }
       }
     }
   }
@@ -111,18 +136,15 @@ pipeline {
     failure {
       echo "❌ Pipeline Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
     }
-    
     always {
       cleanWs()
-
-      emailext (
-          subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
-          body: """Build Status: ${currentBuild.currentResult}
-          Build URL: ${env.BUILD_URL}
-          Build Number: ${env.BUILD_NUMBER}
-          Cluster: ${params.CLUSTER_NAME}
-          Region: ${params.AWS_REGION}""",
-          recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider']]
+      emailext(
+        subject: "${env.JOB_NAME} - Build #${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
+        body: "Build Status: ${currentBuild.currentResult}\nBuild URL: ${env.BUILD_URL}\nCluster: ${params.CLUSTER_NAME}\nRegion: ${params.AWS_REGION}",
+        recipientProviders: [
+          [$class: 'DevelopersRecipientProvider'],
+          [$class: 'RequesterRecipientProvider']
+        ]
       )
     }
   }
