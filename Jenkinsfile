@@ -52,9 +52,6 @@ pipeline {
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS'
         )]) {
-        //   sh 'echo $DOCKER_PASS | docker login $DOCKER_REGISTRY -u $DOCKER_USER --password-stdin'
-        //   sh "docker push ${IMAGE_TAG}"  
-        // docker push docker.io/joeuzo/api-worker:${GIT_TAG}
           sh '''
            echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
            docker push $IMAGE_TAG
@@ -120,7 +117,6 @@ pipeline {
     always {
       cleanWs()
 
-       // Send email notification
       emailext (
           subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
           body: """Build Status: ${currentBuild.currentResult}
