@@ -25,7 +25,7 @@ spec:
       - name: redis-data
         persistentVolumeClaim:
           claimName: redis-pvc
-        
+
 ---
 apiVersion: v1
 kind: Service
@@ -38,7 +38,7 @@ spec:
   ports:
   - port: 6379
     targetPort: 6379
-  type: ClusterIP 
+  type: ClusterIP
 
 ---
 apiVersion: v1
@@ -52,4 +52,4 @@ spec:
   storageClassName: efs-sc
   resources:
     requests:
-      storage: 5Gi 
+      storage: 5Gi
