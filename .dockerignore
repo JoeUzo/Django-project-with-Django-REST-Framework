@@ -24,7 +24,7 @@ venv
 
 # Exclude Dockerfile and docker-compose files if not needed in image
 Dockerfile
-docker-compose.yaml
+docker-compose*.yaml
 
 # Exclude local environment files
 .env
@@ -81,5 +81,9 @@ Thumbs.db
 
 # Other files
 README.md
+README*
 LICENSE
-Jenkinsfile
+Jenkinsfile*
+secret.sh
+*.sql
+*.sqlite*

@@ -54,9 +54,10 @@ pipeline {
         )]) {
         //   sh 'echo $DOCKER_PASS | docker login $DOCKER_REGISTRY -u $DOCKER_USER --password-stdin'
         //   sh "docker push ${IMAGE_TAG}"  
+        // docker push docker.io/joeuzo/api-worker:${GIT_TAG}
           sh '''
            echo "$DOCKER_PASS" | docker login docker.io -u "$DOCKER_USER" --password-stdin
-           docker push docker.io/joeuzo/api-worker:${GIT_TAG}
+           docker push $IMAGE_TAG
            echo $IMAGE_TAG
            echo docker.io/joeuzo/api-worker:${GIT_TAG}
           '''
@@ -108,14 +109,27 @@ pipeline {
     }
 
   post {
-    always {
-      cleanWs()
-    }
     success {
       echo "✅ Pipeline Succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
     }
     failure {
       echo "❌ Pipeline Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+    }
+    
+    always {
+      cleanWs()
+
+       // Send email notification
+      emailext (
+          subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
+          body: """Build Status: ${currentBuild.currentResult}
+          Build URL: ${env.BUILD_URL}
+          Build Number: ${env.BUILD_NUMBER}
+          Action: ${params.ACTION}
+          Cluster: ${params.CLUSTER_NAME}
+          Region: ${params.AWS_REGION}""",
+          recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider']]
+      )
     }
   }
 }

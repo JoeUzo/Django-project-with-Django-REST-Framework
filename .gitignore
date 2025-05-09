@@ -97,3 +97,5 @@ ehthumbs.db
 
 # Other files
 docker-compose-1.yaml
+k8s/secrets.yaml
+*.sql
