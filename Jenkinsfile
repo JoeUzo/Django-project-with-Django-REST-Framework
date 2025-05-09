@@ -85,6 +85,7 @@ pipeline {
       steps {
         script {
           def detachFlag = params.DETACHED ? '-d' : ''
+          sh "docker-compose down -v"
           sh "docker-compose pull"
           sh "docker-compose up --build ${detachFlag}"
         }
