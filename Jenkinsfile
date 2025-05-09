@@ -94,12 +94,12 @@ pipeline {
     stage('Post-Deploy Migrations') {
       when { expression { params.RUN_MIGRATIONS } }
       steps {
-        sh "docker-compose run --rm web python manage.py migrate"
+        sh "docker-compose ps"
+        sh "docker-compose exec -T web python manage.py migrate"
       }
     }
 
-
-   stage('API Smoke Test') {
+    stage('API Smoke Test') {
       steps {
         script {
           def HOST_IP = sh(script: '''hostname -I | awk '{print $1}' ''', returnStdout: true).trim()
