@@ -68,13 +68,7 @@ pipeline {
       steps {
         script {
           // Update kubeconfig for EKS
-          withCredentials([usernamePassword(
-            credentialsId: 'aws-eks-credentials',
-            usernameVariable: 'AWS_ACCESS_KEY_ID',
-            passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-          )]) {
-            sh 'aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}'
-          }
+          sh 'aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}'
 
           // Apply secrets
           withCredentials([file(
