@@ -83,13 +83,13 @@ pipeline {
           sh 'kubectl apply -f k8s/postgres-deployment.yaml'
           sh 'kubectl apply -f k8s/redis-deployment.yaml'
 
-          // Update container images
-          sh "kubectl set image deployment/web web=${IMAGE_TAG} -n app"
-          sh "kubectl set image deployment/worker worker=${IMAGE_TAG} -n app"
-
           // Deploy web & worker
           sh 'kubectl apply -f k8s/web-deployment.yaml'
           sh 'kubectl apply -f k8s/worker-deployment.yaml'
+
+          // Update container images
+          sh "kubectl set image deployment/web web=${IMAGE_TAG} -n app"
+          sh "kubectl set image deployment/worker worker=${IMAGE_TAG} -n app"
 
           // Wait for rollouts
           sh 'kubectl rollout status deployment/web -n app'
