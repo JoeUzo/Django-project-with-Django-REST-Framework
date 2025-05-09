@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,7 +29,7 @@ spec:
       - name: postgres-storage
         persistentVolumeClaim:
           claimName: postgres-pvc
-          
+
 ---
 apiVersion: v1
 kind: Service
@@ -41,4 +42,4 @@ spec:
   ports:
   - port: 5432
     targetPort: 5432
-  type: ClusterIP 
+  type: ClusterIP
