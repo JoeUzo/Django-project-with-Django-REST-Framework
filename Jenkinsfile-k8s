@@ -110,16 +110,11 @@ pipeline {
 
     stage('API Smoke Test') {
       steps {
-        withCredentials([string(
-          credentialsId: 'ingress-host-credential',
-          variable: 'INGRESS_HOST'
-        )]) {
           sh '''
-            curl -f -X POST http://${INGRESS_HOST}:8000/api/process/ \
+            curl -f -X POST http://api.ydidu.click/api/process/ \
                  -H "Content-Type: application/json" \
                  -d '{"email":"you@example.com","message":"Hello"}'
           '''
-        }
       }
     }
   }
