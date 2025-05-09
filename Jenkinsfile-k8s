@@ -94,15 +94,11 @@ pipeline {
 
     stage('API Smoke Test') {
       steps {
-        script {
-          withCredentials([string(credentialsId: 'api-host-credential', variable: 'API_HOST')]) {
-            sh '''
-              curl -f -X POST http://${API_HOST}:8000/api/process/ \\
-                -H "Content-Type: application/json" \\
-                -d '{\"email\":\"you@example.com\",\"message\":\"Hello\"}'
-            '''
-          }
-        }
+        sh '''
+            curl -f -X POST http://${INGRESS_HOST}:8000/api/process/ \\
+             -H "Content-Type: application/json" \\
+            -d '{\"email\":\"you@example.com\",\"message\":\"Hello\"}'
+        '''
       }
     }
   }

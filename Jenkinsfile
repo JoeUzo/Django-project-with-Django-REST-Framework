@@ -82,8 +82,8 @@ pipeline {
       steps {
         script {
           def detachFlag = params.DETACHED ? '-d' : ''
-          sh "docker-compose pull"
-          sh "docker-compose up --build ${detachFlag}"
+          sh "docker compose pull"
+          sh "docker compose up --build ${detachFlag}"
         }
       }
     }
@@ -91,8 +91,8 @@ pipeline {
     stage('Post-Deploy Migrations') {
       when { expression { params.RUN_MIGRATIONS } }
       steps {
-        sh "docker-compose ps"
-        sh "docker-compose exec -T web python manage.py migrate"
+        sh "docker compose ps"
+        sh "docker compose exec -T web python manage.py migrate"
       }
     }
 
