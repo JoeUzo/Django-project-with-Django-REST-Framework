@@ -59,7 +59,7 @@ delete() {
   helm uninstall "$RELEASE_NAME" --namespace "$NAMESPACE" 2>/dev/null || true
 
   echo "Deleting namespace '$NAMESPACE'..."
-  kubectl delete namespace "$NAMESPACE" --ignore-not-found
+  # kubectl delete namespace "$NAMESPACE" --ignore-not-found
 }
 
 case "$ACTION" in
