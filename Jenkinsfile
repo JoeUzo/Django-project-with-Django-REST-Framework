@@ -121,10 +121,7 @@ pipeline {
           subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
           body: """Build Status: ${currentBuild.currentResult}
           Build URL: ${env.BUILD_URL}
-          Build Number: ${env.BUILD_NUMBER}
-          Action: ${params.ACTION}
-          Cluster: ${params.CLUSTER_NAME}
-          Region: ${params.AWS_REGION}""",
+          Build Number: ${env.BUILD_NUMBER}""",
           recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider']]
       )
     }

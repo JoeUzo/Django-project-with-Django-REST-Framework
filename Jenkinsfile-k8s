@@ -4,6 +4,8 @@ pipeline {
   parameters {
     booleanParam(name: 'RUN_SCAN',       defaultValue: true, description: 'Run security scan')
     booleanParam(name: 'RUN_MIGRATIONS', defaultValue: true, description: 'Run DB migrations after deploy')
+    string(name: 'CLUSTER_NAME', defaultValue: 'eks-cluster', description: 'EKS Cluster Name')
+    string(name: 'AWS_REGION', defaultValue: 'us-east-2', description: 'AWS Region')
   }
 
   environment {
@@ -12,7 +14,6 @@ pipeline {
     DOCKER_CRED_ID  = 'docker-credentials'
     K8S_SECRET_ID   = 'k8s-secrets-file'
     EKS_CLUSTER     = 'my-eks-cluster'
-    AWS_REGION      = 'us-west-2'
   }
 
   options {
@@ -59,7 +60,7 @@ pipeline {
 
     stage('Deploy to EKS') {
       steps {
-        sh 'aws eks update-kubeconfig --name ${EKS_CLUSTER} --region ${AWS_REGION}'
+        sh 'aws eks update-kubeconfig --name ${CLUSTER_NAME} --region ${AWS_REGION}'
 
         // Inject sealed secrets or raw secrets
         withCredentials([file(credentialsId: K8S_SECRET_ID, variable: 'SECRETS_YAML')]) {
@@ -119,7 +120,6 @@ pipeline {
           body: """Build Status: ${currentBuild.currentResult}
           Build URL: ${env.BUILD_URL}
           Build Number: ${env.BUILD_NUMBER}
-          Action: ${params.ACTION}
           Cluster: ${params.CLUSTER_NAME}
           Region: ${params.AWS_REGION}""",
           recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider']]
