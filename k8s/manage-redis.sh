@@ -18,7 +18,7 @@ fi
 ACTION="$1"
 
 NAMESPACE="app"
-RELEASE_NAME="my-redis"
+RELEASE_NAME="redis"
 STORAGE_CLASS="efs-sc"
 PV_SIZE="3Gi"
 
