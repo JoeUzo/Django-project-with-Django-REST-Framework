@@ -13,6 +13,9 @@ spec:
       labels:
         app: redis
     spec:
+      # ensure the redis user inside the container can write to /data
+      securityContext:
+        fsGroup: 100      # Redis container’s GID is 100
       containers:
       - name: redis
         image: redis:latest
