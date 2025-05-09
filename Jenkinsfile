@@ -85,7 +85,6 @@ pipeline {
       steps {
         script {
           def detachFlag = params.DETACHED ? '-d' : ''
-          sh "docker-compose down -v"
           sh "docker-compose pull"
           sh "docker-compose up --build ${detachFlag}"
         }
@@ -103,7 +102,7 @@ pipeline {
     stage('API Smoke Test') {
       steps {
         script {
-          def HOST_IP = sh(script: '''hostname -I | awk '{print $1}' ''', returnStdout: true).trim()
+          def HOST_IP = sh(script: 'curl -s ifconfig.me', returnStdout: true).trim()
           sh "curl -f -X POST http://${HOST_IP}:8000/api/process/ -H 'Content-Type: application/json' -d '{\"email\":\"you@example.com\",\"message\":\"Hello\"}'"
         }
       }
