@@ -1,0 +1,133 @@
+pipeline {
+  agent any
+
+  parameters {
+    booleanParam(name: 'RUN_SCAN',       defaultValue: true, description: 'Run security scan')
+    booleanParam(name: 'RUN_MIGRATIONS', defaultValue: true, description: 'Run DB migrations after deploy')
+  }
+
+  environment {
+    DOCKER_REGISTRY = 'docker.io/joeuzo'
+    IMAGE_NAME      = 'api-worker'
+    DOCKER_CRED_ID  = 'docker-credentials'
+    K8S_SECRET_ID   = 'k8s-secrets-file'
+    EKS_CLUSTER     = 'my-eks-cluster'
+    AWS_REGION      = 'us-west-2'
+  }
+
+  options {
+    timestamps()
+    buildDiscarder(logRotator(numToKeepStr: '10', daysToKeepStr: '30'))
+  }
+
+  stages {
+    stage('Checkout & Build') {
+      steps {
+        checkout scm
+        script {
+          env.GIT_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+          env.IMAGE_TAG = "${DOCKER_REGISTRY}/${IMAGE_NAME}:${GIT_TAG}"
+        }
+        sh "docker build -t ${IMAGE_TAG} ."
+      }
+    }
+
+    stage('Scan & Push') {
+      steps {
+        when { expression { params.RUN_SCAN } }
+        sh "trivy image --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_TAG} || true"
+        withCredentials([usernamePassword(
+          credentialsId: DOCKER_CRED_ID,
+          usernameVariable: 'DOCKER_USER',
+          passwordVariable: 'DOCKER_PASS'
+        )]) {
+          sh '''
+            echo "$DOCKER_PASS" | docker login $DOCKER_REGISTRY -u "$DOCKER_USER" --password-stdin
+            docker push ${IMAGE_TAG}
+          '''
+        }
+      }
+    }
+
+    stage('Manual Approval') {
+      steps {
+        timeout(time: 30, unit: 'MINUTES') {
+          input message: 'Approve deploy to EKS?', ok: 'Deploy'
+        }
+      }
+    }
+
+    stage('Deploy to EKS') {
+      steps {
+        sh 'aws eks update-kubeconfig --name ${EKS_CLUSTER} --region ${AWS_REGION}'
+
+        // Inject sealed secrets or raw secrets
+        withCredentials([file(credentialsId: K8S_SECRET_ID, variable: 'SECRETS_YAML')]) {
+          sh 'kubectl apply -f $SECRETS_YAML'
+        }
+
+        // Apply persistent volume claims / deployments
+        sh 'kubectl apply -f k8s/postgres-pvc.yaml'
+        sh 'kubectl apply -f k8s/postgres-deployment.yaml'
+        sh 'kubectl apply -f k8s/redis-deployment.yaml'
+
+        // Update image on existing deployments
+        sh "kubectl set image deployment/web-deployment web=${IMAGE_TAG}"
+        sh "kubectl set image deployment/worker-deployment worker=${IMAGE_TAG}"
+
+        // Apply any additional manifests (if needed)
+        sh 'kubectl apply -f k8s/web-deployment.yaml'
+        sh 'kubectl apply -f k8s/worker-deployment.yaml'
+
+        // Wait for rollout
+        sh 'kubectl rollout status deployment/web-deployment'
+        sh 'kubectl rollout status deployment/worker-deployment'
+      }
+    }
+
+    stage('Post-Deploy Migrations') {
+      when { expression { params.RUN_MIGRATIONS } }
+      steps {
+        sh 'kubectl exec deployment/web-deployment -- python manage.py migrate'
+      }
+    }
+
+    stage('API Smoke Test') {
+      steps {
+        script {
+          withCredentials([string(credentialsId: 'api-host-credential', variable: 'API_HOST')]) {
+            sh '''
+              curl -f -X POST http://${API_HOST}:8000/api/process/ \\
+                -H "Content-Type: application/json" \\
+                -d '{\"email\":\"you@example.com\",\"message\":\"Hello\"}'
+            '''
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "✅ Pipeline Succeeded: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+    }
+    failure {
+      echo "❌ Pipeline Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+    }
+    
+    always {
+      cleanWs()
+
+      emailext (
+          subject: "${env.JOB_NAME} - Build # ${env.BUILD_NUMBER} - ${currentBuild.currentResult}",
+          body: """Build Status: ${currentBuild.currentResult}
+          Build URL: ${env.BUILD_URL}
+          Build Number: ${env.BUILD_NUMBER}
+          Action: ${params.ACTION}
+          Cluster: ${params.CLUSTER_NAME}
+          Region: ${params.AWS_REGION}""",
+          recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider']]
+      )
+    }
+  }
+}
